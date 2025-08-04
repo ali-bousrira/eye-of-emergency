@@ -6,11 +6,6 @@ from sklearn.utils.multiclass import unique_labels
 from scipy.sparse import issparse
 
 class CustomDecisionTree(BaseEstimator, ClassifierMixin):
-    """
-    Implémentation personnalisée d'un arbre de décision pour la classification binaire
-    Compatible avec scikit-learn pour utilisation dans Pipeline et GridSearchCV
-    """
-    
     def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
