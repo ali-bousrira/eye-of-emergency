@@ -1,9 +1,14 @@
 import numpy as np
 from collections import Counter
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils.validation import check_X_y, check_array
+from sklearn.utils.multiclass import unique_labels
+from scipy.sparse import issparse
 
-class CustomDecisionTree:
+class CustomDecisionTree(BaseEstimator, ClassifierMixin):
     """
     Implémentation personnalisée d'un arbre de décision pour la classification binaire
+    Compatible avec scikit-learn pour utilisation dans Pipeline et GridSearchCV
     """
     
     def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1):
@@ -11,6 +16,9 @@ class CustomDecisionTree:
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.tree = None
+        self.classes_ = None
+        self.n_classes_ = None
+        self.n_features_in_ = None
     
     def _entropy(self, y):
         """Calcule l'entropie d'un ensemble de labels"""
@@ -107,7 +115,13 @@ class CustomDecisionTree:
         }
     
     def fit(self, X, y):
-        """Entraîne l'arbre de décision"""
+        if issparse(X):
+            X = X.toarray()
+            
+        X, y = check_X_y(X, y)
+        self.classes_ = unique_labels(y)
+        self.n_classes_ = len(self.classes_)
+        self.n_features_in_ = X.shape[1]
         self.tree = self._build_tree(X, y)
         return self
     
@@ -122,8 +136,26 @@ class CustomDecisionTree:
             return self._predict_sample(sample, tree['right'])
     
     def predict(self, X):
-        """Prédit les classes pour un ensemble d'échantillons"""
-        predictions = []
-        for sample in X:
-            predictions.append(self._predict_sample(sample, self.tree))
-        return np.array(predictions)
+        if issparse(X):
+            X = X.toarray()
+            
+        X = check_array(X)
+        return np.array([self._predict_sample(sample, self.tree) for sample in X])
+    
+    def get_params(self, deep=True):
+        """Récupère les paramètres de l'estimateur (requis par scikit-learn)"""
+        return {
+            'max_depth': self.max_depth,
+            'min_samples_split': self.min_samples_split,
+            'min_samples_leaf': self.min_samples_leaf
+        }
+    
+    def set_params(self, **params):
+        """Définit les paramètres de l'estimateur (requis par scikit-learn)"""
+        for key, value in params.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                # Si le paramètre n'existe pas, lever une erreur
+                raise ValueError(f"Invalid parameter {key} for estimator {self.__class__.__name__}")
+        return self
